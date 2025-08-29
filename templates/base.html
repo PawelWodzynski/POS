@@ -30,7 +30,9 @@
       </a>
 
       <!-- Kategorie (dynamiczne) -->
+      {% if session.get('user_id') %}
       <div id="category-buttons" class="d-flex gap-2 flex-wrap justify-content-center"></div>
+      {% endif %}
 
       <!-- Login/Register or User Info -->
       <div class="btn-group" role="group">
