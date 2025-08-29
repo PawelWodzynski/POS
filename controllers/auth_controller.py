@@ -22,12 +22,6 @@ def login_page():
     session.clear()
     return render_template("login.html")
 
-@auth_bp.route("/register", methods=["GET"])
-def register_page():
-    # Clear session when loading register page
-    session.clear()
-    return render_template("register.html")
-
 @auth_bp.route("/logout", methods=["GET"])
 def logout():
     session.clear()
@@ -35,6 +29,8 @@ def logout():
 
 @auth_bp.route("/main-page", methods=["GET"])
 def main_page():
+    if 'user_id' not in session:
+        return redirect(url_for("auth.login_page"))
     return render_template("main.html")
 
 @auth_bp.route("/profile", methods=["GET"])
@@ -121,63 +117,6 @@ def update_password():
         db.session.rollback()
         current_app.logger.exception("Failed to update password")
         return jsonify({"error": "Failed to update password"}), 500
-
-@auth_bp.route("/api/register", methods=["POST"])
-def api_register():
-    payload = request.get_json() if request.is_json else request.form
-    login = payload.get("login", "").strip()
-    password = payload.get("password", "")
-    email = payload.get("email", "").strip()
-
-    if not login or not password or not email:
-        return jsonify({"error": "login, password and email are required"}), 400
-
-    # Hashowanie hasła przy użyciu bcrypt
-    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-
-    params = {
-        "login": login,
-        "password": hashed,
-        "email": email,
-        "city": payload.get("city"),
-        "street": payload.get("street"),
-        "postal_code": payload.get("postal_code"),
-        "first_name": payload.get("first_name"),
-        "last_name": payload.get("last_name"),
-        "role_id": 2
-    }
-
-    try:
-        # Check if email or login already exists
-        existing_user = db.session.execute(
-            text("SELECT id FROM customers WHERE email = :email OR login = :login"),
-            {"email": params["email"], "login": params["login"]}
-        ).fetchone()
-        if existing_user:
-            return jsonify({"error": "Email or login already exists"}), 400
-
-        stmt = text("""
-            INSERT INTO customers (login, password, email, city, street, postal_code, first_name, last_name, role_id)
-            VALUES (:login, :password, :email, :city, :street, :postal_code, :first_name, :last_name, :role_id)
-            RETURNING id
-        """)
-        res = db.session.execute(stmt, params)
-        user_id = res.scalar_one()
-        db.session.commit()
-
-        expires = datetime.timedelta(hours=12)
-        token = create_access_token(identity=int(user_id), expires_delta=expires)
-
-        # Set session on successful registration
-        from flask import session
-        session['user_id'] = user_id
-        session['user_login'] = login
-
-        return jsonify({"access_token": token, "user_id": user_id}), 201
-    except Exception as exc:
-        db.session.rollback()
-        current_app.logger.exception("Registration failed")
-        return jsonify({"error": "registration failed", "detail": str(exc)}), 400
 
 @auth_bp.route("/api/login", methods=["POST"])
 def api_login():

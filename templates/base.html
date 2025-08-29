@@ -36,7 +36,7 @@
       <div class="btn-group" role="group">
         {% if not session.get('user_id') %}
           <a href="{{ url_for('auth.login_page') }}" class="btn btn-outline-primary">Login</a>
-          <a href="{{ url_for('auth.register_page') }}" class="btn btn-primary">Register</a>
+          {# Registration button removed #}
         {% else %}
           <a href="{{ url_for('auth.profile_page') }}" class="btn btn-outline-primary">{{ session.get('user_login') }}</a>
           <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">Logout</a>
