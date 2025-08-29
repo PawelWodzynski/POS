@@ -112,17 +112,10 @@ def update_password():
     if not current_password or not new_password:
         return jsonify({"error": "Current and new password required"}), 400
     try:
-        stmt = text("SELECT password FROM customers WHERE id = :id")
-        row = db.session.execute(stmt, {"id": user_id}).fetchone()
-        if not row:
-            return jsonify({"error": "User not found"}), 404
-        stored_hash = row[0]
-        if not bcrypt.checkpw(current_password.encode("utf-8"), stored_hash.encode("utf-8")):
-            return jsonify({"error": "Current password incorrect"}), 401
-        new_hashed = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-        stmt = text("UPDATE customers SET password = :password WHERE id = :id")
-        db.session.execute(stmt, {"password": new_hashed, "id": user_id})
-        db.session.commit()
+        from services.customer_service import CustomerService
+        success, error = CustomerService.update_password(user_id, current_password, new_password)
+        if not success:
+            return jsonify({"error": error}), 400
         return jsonify({"message": "Password updated"})
     except Exception as exc:
         db.session.rollback()
@@ -188,6 +181,7 @@ def api_register():
 
 @auth_bp.route("/api/login", methods=["POST"])
 def api_login():
+    from flask import session
     payload = request.get_json() if request.is_json else request.form
     login = payload.get("login", "").strip()
     password = payload.get("password", "")
@@ -196,26 +190,19 @@ def api_login():
         return jsonify({"error": "login and password are required"}), 400
 
     try:
-        stmt = text("SELECT id, password FROM customers WHERE login = :login LIMIT 1")
-        row = db.session.execute(stmt, {"login": login}).fetchone()
-
-        if not row:
-            return jsonify({"error": "invalid credentials"}), 401
-
-        user_id, stored_hash = row
-
-        # Weryfikacja hasła przez bcrypt
-        if not bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8")):
-            return jsonify({"error": "invalid credentials"}), 401
+        from services.customer_service import CustomerService
+        success, error, user_id, user_login = CustomerService.login_user(login, password)
+        if not success:
+            return jsonify({"error": error}), 401
 
         expires = datetime.timedelta(hours=12)
         token = create_access_token(identity=int(user_id), expires_delta=expires)
 
-        session["user_id"] = user_id
-        session["user_login"] = login
+        # Set session
+        session['user_id'] = user_id
+        session['user_login'] = user_login
 
         return jsonify({"access_token": token, "user_id": user_id}), 200
-
     except Exception as exc:
         current_app.logger.exception("Login failed")
         return jsonify({"error": "login failed", "detail": str(exc)}), 500
