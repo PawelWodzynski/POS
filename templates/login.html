@@ -39,52 +39,8 @@
     </div>
   </div>
 </div>
+{% endblock %}
 
 {% block scripts %}
 {{ super() }}
-<script>
-(function () {
-  const form = document.getElementById('loginForm');
-  const alertEl = document.getElementById('loginAlert');
-
-  form.addEventListener('submit', async function (e) {
-    e.preventDefault();
-    alertEl.classList.add('d-none');
-    const login = document.getElementById('login').value.trim();
-    const password = document.getElementById('password').value;
-
-    if (!login || !password) {
-      alertEl.textContent = 'Please provide both login and password';
-      alertEl.classList.remove('d-none');
-      return;
-    }
-
-    try {
-      const res = await fetch('{{ url_for("auth.api_login") }}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ login, password })
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alertEl.textContent = data.error || data.detail || 'Login failed';
-        alertEl.classList.remove('d-none');
-        return;
-      }
-
-      // store token
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('user_id', data.user_id);
-
-      // redirect to products or root
-      window.location.href = '/products';
-    } catch (err) {
-      alertEl.textContent = 'Network error';
-      alertEl.classList.remove('d-none');
-    }
-  });
-})();
-</script>
-{% endblock %}
 {% endblock %}

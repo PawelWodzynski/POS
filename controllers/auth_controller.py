@@ -9,7 +9,11 @@ auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/", methods=["GET"])
 def root_redirect():
-    return redirect(url_for("auth.login_page"))
+    return redirect(url_for("auth.main_page"))
+
+@auth_bp.route("/main-page", methods=["GET"])
+def main_page():
+    return render_template("main.html")
 
 @auth_bp.route("/login", methods=["GET"])
 def login_page():
