@@ -36,10 +36,12 @@ def create_app(test_config=None):
     from controllers.auth_controller import auth_bp
     from controllers.category_controller import category_bp
     from controllers.main_controller import main_bp
+    from controllers.product_controller import product_controller
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(category_bp)
     app.register_blueprint(main_bp)
+    app.register_blueprint(product_controller)
 
     # Health check
     @app.route("/_health")

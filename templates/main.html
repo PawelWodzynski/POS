@@ -1,4 +1,86 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="row" id="product-tiles-container"></div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+function renderProductTiles() {
+  const container = document.getElementById('product-tiles-container');
+  if (!container) return;
+
+  container.innerHTML = '';
+  // Iterate over localStorage keys to find products
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith('product_')) {
+      try {
+        const product = JSON.parse(localStorage.getItem(key));
+        if (product) {
+          const col = document.createElement('div');
+          col.className = 'col-md-3 mb-4';
+
+          const card = document.createElement('div');
+          card.className = 'card h-100';
+
+          const img = document.createElement('img');
+          img.src = product.image;
+          img.className = 'card-img-top';
+          img.alt = product.title;
+
+          const cardBody = document.createElement('div');
+          cardBody.className = 'card-body';
+
+          const title = document.createElement('h5');
+          title.className = 'card-title';
+          title.textContent = product.title;
+
+          const price = document.createElement('p');
+          price.className = 'card-text';
+          price.textContent = '$' + product.price.toFixed(2);
+
+          cardBody.appendChild(title);
+          cardBody.appendChild(price);
+          card.appendChild(img);
+          card.appendChild(cardBody);
+          col.appendChild(card);
+          container.appendChild(col);
+        }
+      } catch (e) {
+        console.error('Failed to parse product from localStorage key:', key, e);
+      }
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderProductTiles();
+});
+
+if (window.location.pathname === '/main-page') {
+  document.addEventListener('DOMContentLoaded', async () => {
+    const localStorageKey = 'fakestore_products_loaded';
+    if (!localStorage.getItem(localStorageKey)) {
+      try {
+        const res = await fetch('/api/products/fakestore');
+        if (!res.ok) throw new Error('Network response was not ok');
+        const products = await res.json();
+        products.forEach(product => {
+          localStorage.setItem('product_' + product.id, JSON.stringify(product));
+        });
+        localStorage.setItem(localStorageKey, 'true');
+        console.log('Products loaded and saved to localStorage');
+        renderProductTiles();
+      } catch (err) {
+        console.error('Failed to fetch products:', err);
+      }
+    } else {
+      console.log('Products already in localStorage, skipping fetch');
+      renderProductTiles();
+    }
+  });
+}
+</script>
 {% endblock %}

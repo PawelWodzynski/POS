@@ -57,12 +57,6 @@
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="site-footer text-center">
-    <div class="container">
-      <small class="text-muted">© {{ (range(2020, (2020 + 6))|first) }} POS — Demo project</small>
-    </div>
-  </footer>
-
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 
@@ -74,11 +68,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!container) return;
 
   let categories = localStorage.getItem(localStorageKey);
-  if (categories) {
+  if (categories && categories !== 'undefined' && categories !== 'null') {
     try {
+      console.log('Attempting to load categories from localStorage');
       categories = JSON.parse(categories);
+      console.log('Categories loaded from localStorage:', categories);
       renderCategories(categories);
-      console.log('Loaded categories from localStorage:', categories);
+      console.log('Category buttons rendered from localStorage data');
       return;
     } catch (e) {
       console.error('Failed to parse categories from localStorage', e);
@@ -87,12 +83,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   try {
+    console.log('Fetching categories from fakestoreapi.com');
     const res = await fetch('https://fakestoreapi.com/products/categories');
     if (!res.ok) throw new Error('Network response was not ok');
     categories = await res.json();
     localStorage.setItem(localStorageKey, JSON.stringify(categories));
     renderCategories(categories);
     console.log('Fetched and stored categories:', categories);
+    console.log('Category buttons rendered from fetched data');
   } catch (err) {
     console.error('Failed to fetch categories:', err);
   }
