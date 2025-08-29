@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}User Profile{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>User Profile</h2>
+  <form id="profileForm" novalidate>
+    <div class="mb-3">
+      <label for="email" class="form-label">Email</label>
+      <input type="email" class="form-control" id="email" name="email" required>
+    </div>
+    <h4>Address</h4>
+    <div class="mb-3">
+      <label for="city" class="form-label">City</label>
+      <input type="text" class="form-control" id="city" name="city">
+    </div>
+    <div class="mb-3">
+      <label for="street" class="form-label">Street</label>
+      <input type="text" class="form-control" id="street" name="street">
+    </div>
+    <div class="mb-3">
+      <label for="postal_code" class="form-label">Postal Code</label>
+      <input type="text" class="form-control" id="postal_code" name="postal_code">
+    </div>
+    <h4>Change Password</h4>
+    <div class="mb-3">
+      <label for="current_password" class="form-label">Current Password</label>
+      <input type="password" class="form-control" id="current_password" name="current_password">
+    </div>
+    <div class="mb-3">
+      <label for="new_password" class="form-label">New Password</label>
+      <input type="password" class="form-control" id="new_password" name="new_password">
+    </div>
+    <div class="mb-3">
+      <label for="new_password_confirm" class="form-label">Confirm New Password</label>
+      <input type="password" class="form-control" id="new_password_confirm" name="new_password_confirm">
+    </div>
+    <div id="profileAlert" class="alert alert-danger d-none" role="alert"></div>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const form = document.getElementById('profileForm');
+  const alertEl = document.getElementById('profileAlert');
+
+  // Load current user data
+  async function loadUserData() {
+    try {
+      const res = await fetch('/api/profile', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to load profile data');
+      const data = await res.json();
+      document.getElementById('email').value = data.email || '';
+      document.getElementById('city').value = data.city || '';
+      document.getElementById('street').value = data.street || '';
+      document.getElementById('postal_code').value = data.postal_code || '';
+    } catch (err) {
+      alertEl.textContent = err.message;
+      alertEl.classList.remove('d-none');
+    }
+  }
+
+  loadUserData();
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    alertEl.classList.add('d-none');
+
+    const email = document.getElementById('email').value.trim();
+    const city = document.getElementById('city').value.trim();
+    const street = document.getElementById('street').value.trim();
+    const postal_code = document.getElementById('postal_code').value.trim();
+    const current_password = document.getElementById('current_password').value;
+    const new_password = document.getElementById('new_password').value;
+    const new_password_confirm = document.getElementById('new_password_confirm').value;
+
+    if (new_password !== new_password_confirm) {
+      alertEl.textContent = 'New passwords do not match';
+      alertEl.classList.remove('d-none');
+      return;
+    }
+
+    try {
+      // Update email and address
+      const resProfile = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, city, street, postal_code })
+      });
+      if (!resProfile.ok) {
+        const errData = await resProfile.json();
+        throw new Error(errData.error || 'Failed to update profile');
+      }
+
+      // Update password if provided
+      if (current_password && new_password) {
+        const resPass = await fetch('/api/profile/password', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ current_password, new_password })
+        });
+        if (!resPass.ok) {
+          const errData = await resPass.json();
+          throw new Error(errData.error || 'Failed to update password');
+        }
+      }
+
+      alert('Profile updated successfully');
+      // Optionally clear password fields
+      document.getElementById('current_password').value = '';
+      document.getElementById('new_password').value = '';
+      document.getElementById('new_password_confirm').value = '';
+    } catch (err) {
+      alertEl.textContent = err.message;
+      alertEl.classList.remove('d-none');
+    }
+  });
+});
+</script>
+{% endblock %}

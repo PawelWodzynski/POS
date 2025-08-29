@@ -38,7 +38,7 @@
           <a href="{{ url_for('auth.login_page') }}" class="btn btn-outline-primary">Login</a>
           <a href="{{ url_for('auth.register_page') }}" class="btn btn-primary">Register</a>
         {% else %}
-          <button type="button" class="btn btn-outline-primary" disabled>{{ session.get('user_login') }}</button>
+          <a href="{{ url_for('auth.profile_page') }}" class="btn btn-outline-primary">{{ session.get('user_login') }}</a>
           <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">Logout</a>
         {% endif %}
       </div>
