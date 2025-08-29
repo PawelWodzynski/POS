@@ -97,82 +97,164 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Failed to fetch categories:', err);
   }
 
-  function renderCategories(categories) {
-    container.innerHTML = '';
-    categories.forEach(cat => {
-      const a = document.createElement('a');
-      a.href = '/categories?cat=' + encodeURIComponent(cat);
-      a.className = 'btn btn-outline-primary';
-      a.textContent = cat;
-      container.appendChild(a);
-    });
+    function renderCategories(categories) {
+      container.innerHTML = '';
+      categories.forEach(cat => {
+        const a = document.createElement('a');
+        a.href = '/categories?cat=' + encodeURIComponent(cat);
+        a.className = 'btn btn-outline-primary category-btn';
+        a.textContent = cat;
+        container.appendChild(a);
+      });
 
-    // Append the "Dodaj" button at the end
-    const addBtn = document.createElement('button');
-    addBtn.id = 'add-category-btn';
-    addBtn.type = 'button';
-    addBtn.className = 'btn btn-success';
-    addBtn.textContent = 'Dodaj';
-    container.appendChild(addBtn);
+      // Append the "Dodaj" button at the end
+      const addBtn = document.createElement('button');
+      addBtn.id = 'add-category-btn';
+      addBtn.type = 'button';
+      addBtn.className = 'btn btn-success';
+      addBtn.textContent = 'Dodaj';
+      container.appendChild(addBtn);
 
-    // Modal elements
-    const modal = new bootstrap.Modal(document.getElementById('addCategoryModal'));
-    const input = document.getElementById('newCategoryInput');
-    const confirmBtn = document.getElementById('confirmAddCategoryBtn');
+      // Append the "Usuń" button next to "Dodaj"
+      const deleteBtn = document.createElement('button');
+      deleteBtn.id = 'delete-category-btn';
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'btn btn-danger ms-2';
+      deleteBtn.textContent = 'Usuń';
+      container.appendChild(deleteBtn);
 
-    addBtn.addEventListener('click', () => {
-      input.value = '';
-      modal.show();
-    });
+      // Modal elements
+      const modal = new bootstrap.Modal(document.getElementById('addCategoryModal'));
+      const input = document.getElementById('newCategoryInput');
+      const confirmBtn = document.getElementById('confirmAddCategoryBtn');
 
-    confirmBtn.addEventListener('click', async () => {
-      const newCategory = input.value.trim();
-      if (!newCategory) {
-        alert('Category name cannot be empty');
-        return;
+      addBtn.addEventListener('click', () => {
+        input.value = '';
+        modal.show();
+      });
+
+      // State for delete mode and selected categories
+      let deleteMode = false;
+      const selectedCategories = new Set();
+
+      deleteBtn.addEventListener('click', async () => {
+        if (!deleteMode) {
+          // Enter delete mode
+          deleteMode = true;
+          deleteBtn.textContent = 'Zatwierdź';
+          // Disable other buttons except deleteBtn
+          addBtn.disabled = true;
+          // Add click listeners to category buttons for selection and prevent navigation
+          document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.classList.remove('btn-outline-primary');
+            btn.classList.add('btn-outline-danger');
+            btn.style.cursor = 'pointer';
+            btn.addEventListener('click', toggleCategorySelection);
+            btn.addEventListener('click', preventNavigation);
+          });
+          
+          function preventNavigation(event) {
+            event.preventDefault();
+          }
+        } else {
+          // Confirm deletion
+          if (selectedCategories.size === 0) {
+            alert('No categories selected for deletion');
+            return;
+          }
+          try {
+            const res = await fetch('/api/categories', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ categories: Array.from(selectedCategories) })
+            });
+            if (!res.ok) {
+              const errorData = await res.json();
+              alert(errorData.message || 'Failed to delete categories');
+              return;
+            }
+            const data = await res.json();
+            // Remove deleted categories from localStorage
+            categories = categories.filter(cat => !data.deleted_categories.includes(cat));
+            localStorage.setItem(localStorageKey, JSON.stringify(categories));
+            // Refresh buttons
+            renderCategories(categories);
+            // Reset delete mode
+            deleteMode = false;
+            selectedCategories.clear();
+            // Re-enable other buttons
+            addBtn.disabled = false;
+            // Remove preventNavigation listeners from category buttons
+            document.querySelectorAll('.category-btn').forEach(btn => {
+              btn.removeEventListener('click', preventNavigation);
+            });
+          } catch (err) {
+            alert('Error deleting categories');
+            console.error(err);
+          }
+        }
+      });
+
+      function toggleCategorySelection(event) {
+        const btn = event.currentTarget;
+        const category = btn.textContent;
+        if (selectedCategories.has(category)) {
+          selectedCategories.delete(category);
+          btn.classList.remove('active');
+        } else {
+          selectedCategories.add(category);
+          btn.classList.add('active');
+        }
       }
 
-      try {
-        const res = await fetch('/api/categories', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ category: newCategory })
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          alert(errorData.message || 'Failed to add category');
+      confirmBtn.addEventListener('click', async () => {
+        const newCategory = input.value.trim();
+        if (!newCategory) {
+          alert('Category name cannot be empty');
           return;
         }
 
-        const data = await res.json();
+        try {
+          const res = await fetch('/api/categories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ category: newCategory })
+          });
 
-        // Add new category button before the "Dodaj" button
-        const newBtn = document.createElement('a');
-        newBtn.href = '/categories?cat=' + encodeURIComponent(data.category);
-        newBtn.className = 'btn btn-outline-primary';
-        newBtn.textContent = data.category;
-        container.insertBefore(newBtn, addBtn);
+          if (!res.ok) {
+            const errorData = await res.json();
+            alert(errorData.message || 'Failed to add category');
+            return;
+          }
 
-        // Update localStorage
-        categories.push(data.category);
-        localStorage.setItem(localStorageKey, JSON.stringify(categories));
+          const data = await res.json();
 
-        modal.hide();
-      } catch (err) {
-        alert('Error adding category');
-        console.error(err);
-      }
-    });
+          // Add new category button before the "Dodaj" button
+          const newBtn = document.createElement('a');
+          newBtn.href = '/categories?cat=' + encodeURIComponent(data.category);
+          newBtn.className = 'btn btn-outline-primary category-btn';
+          newBtn.textContent = data.category;
+          container.insertBefore(newBtn, addBtn);
 
-    // Submit on Enter key press in input field
-    input.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        confirmBtn.click();
-      }
-    });
-  }
+          // Update localStorage
+          categories.push(data.category);
+          localStorage.setItem(localStorageKey, JSON.stringify(categories));
+
+          modal.hide();
+        } catch (err) {
+          alert('Error adding category');
+          console.error(err);
+        }
+      });
+
+      // Submit on Enter key press in input field
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          confirmBtn.click();
+        }
+      });
+    }
 });
 </script>
 {% endblock %}
