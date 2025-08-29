@@ -69,29 +69,131 @@
   {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('DOM loaded, starting category fetch...');
+  const localStorageKey = 'fakestore_categories';
+  const container = document.getElementById('category-buttons');
+  if (!container) return;
+
+  let categories = localStorage.getItem(localStorageKey);
+  if (categories) {
     try {
-        const res = await fetch('/api/categories', { cache: 'no-store' });
-        console.log('Response status:', res.status);
-        const cats = await res.json();
-        console.log('Categories:', cats);
-
-        const container = document.getElementById('category-buttons');
-        if (!container) return console.error('Container not found');
-
-        cats.forEach(cat => {
-            const a = document.createElement('a');
-            a.href = '/categories?cat=' + encodeURIComponent(cat);
-            a.className = 'btn btn-outline-primary';
-            a.textContent = cat;
-            container.appendChild(a);
-        });
-    } catch (err) {
-        console.error('Fetch failed', err);
+      categories = JSON.parse(categories);
+      renderCategories(categories);
+      console.log('Loaded categories from localStorage:', categories);
+      return;
+    } catch (e) {
+      console.error('Failed to parse categories from localStorage', e);
+      localStorage.removeItem(localStorageKey);
     }
+  }
+
+  try {
+    const res = await fetch('https://fakestoreapi.com/products/categories');
+    if (!res.ok) throw new Error('Network response was not ok');
+    categories = await res.json();
+    localStorage.setItem(localStorageKey, JSON.stringify(categories));
+    renderCategories(categories);
+    console.log('Fetched and stored categories:', categories);
+  } catch (err) {
+    console.error('Failed to fetch categories:', err);
+  }
+
+  function renderCategories(categories) {
+    container.innerHTML = '';
+    categories.forEach(cat => {
+      const a = document.createElement('a');
+      a.href = '/categories?cat=' + encodeURIComponent(cat);
+      a.className = 'btn btn-outline-primary';
+      a.textContent = cat;
+      container.appendChild(a);
+    });
+
+    // Append the "Dodaj" button at the end
+    const addBtn = document.createElement('button');
+    addBtn.id = 'add-category-btn';
+    addBtn.type = 'button';
+    addBtn.className = 'btn btn-success';
+    addBtn.textContent = 'Dodaj';
+    container.appendChild(addBtn);
+
+    // Modal elements
+    const modal = new bootstrap.Modal(document.getElementById('addCategoryModal'));
+    const input = document.getElementById('newCategoryInput');
+    const confirmBtn = document.getElementById('confirmAddCategoryBtn');
+
+    addBtn.addEventListener('click', () => {
+      input.value = '';
+      modal.show();
+    });
+
+    confirmBtn.addEventListener('click', async () => {
+      const newCategory = input.value.trim();
+      if (!newCategory) {
+        alert('Category name cannot be empty');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category: newCategory })
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          alert(errorData.message || 'Failed to add category');
+          return;
+        }
+
+        const data = await res.json();
+
+        // Add new category button before the "Dodaj" button
+        const newBtn = document.createElement('a');
+        newBtn.href = '/categories?cat=' + encodeURIComponent(data.category);
+        newBtn.className = 'btn btn-outline-primary';
+        newBtn.textContent = data.category;
+        container.insertBefore(newBtn, addBtn);
+
+        // Update localStorage
+        categories.push(data.category);
+        localStorage.setItem(localStorageKey, JSON.stringify(categories));
+
+        modal.hide();
+      } catch (err) {
+        alert('Error adding category');
+        console.error(err);
+      }
+    });
+
+    // Submit on Enter key press in input field
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        confirmBtn.click();
+      }
+    });
+  }
 });
 </script>
 {% endblock %}
 
+  <!-- Add Category Modal -->
+  <div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addCategoryModalLabel">Add New Category</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="newCategoryInput" class="form-control" placeholder="Enter category name" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="confirmAddCategoryBtn" class="btn btn-primary">Add</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

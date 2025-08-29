@@ -1,5 +1,4 @@
-from flask import Blueprint, current_app, jsonify, make_response
-import requests
+from flask import Blueprint, request, jsonify, session, redirect, url_for
 
 category_bp = Blueprint("category", __name__)
 
@@ -9,23 +8,36 @@ def proxy_categories():
     Proxy endpoint that fetches categories from FakeStoreAPI and returns them unchanged.
     GET /api/categories -> forwards to https://fakestoreapi.com/products/categories
     """
-    base = current_app.config.get("FAKESTORE_API_BASE", "https://fakestoreapi.com")
+    base = "https://fakestoreapi.com"
     url = f"{base.rstrip('/')}/products/categories"
 
-    # Prefer a shared session if the app set one up
-    session = current_app.extensions.get("http_session") if current_app.extensions else None
-    try:
-        if session and isinstance(session, requests.sessions.Session):
-            resp = session.get(url, timeout=10)
-        else:
-            resp = requests.get(url, timeout=10)
+    # Check if user is logged in
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
 
-        # If upstream returned non-JSON or error, forward status and text
-        try:
-            data = resp.json()
-            return make_response(jsonify(data), resp.status_code)
-        except ValueError:
-            return make_response(resp.text, resp.status_code)
+    import requests
+    try:
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        return jsonify(data)
     except requests.RequestException as exc:
-        current_app.logger.exception("Failed to fetch categories from FakeStoreAPI")
-        return make_response(jsonify({"error": "failed to fetch categories", "detail": str(exc)}), 502)
+        return jsonify({"error": "failed to fetch categories", "detail": str(exc)}), 502
+
+@category_bp.route("/api/categories", methods=["POST"])
+def create_category():
+    """
+    Simulated endpoint to create a category.
+    Accepts JSON with 'category' field and returns it in response.
+    Only accessible to logged-in users.
+    """
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    category_name = data.get("category")
+    if not category_name or category_name.strip() == "":
+        return jsonify({"error": "Category name cannot be empty"}), 400
+
+    # Simulate creation by returning the category name
+    return jsonify({"category": category_name}), 201
