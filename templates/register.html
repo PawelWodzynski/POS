@@ -75,4 +75,62 @@
 
 {% block scripts %}
 {{ super() }}
+<script>
+(function () {
+  const form = document.getElementById('registerForm');
+  const alertEl = document.getElementById('registerAlert');
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    alertEl.classList.add('d-none');
+
+    const data = {
+      login: document.getElementById('login').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      password: document.getElementById('password').value,
+      password2: document.getElementById('password2').value,
+      first_name: document.getElementById('first_name').value.trim(),
+      last_name: document.getElementById('last_name').value.trim(),
+      city: document.getElementById('city').value.trim(),
+      street: document.getElementById('street').value.trim(),
+      postal_code: document.getElementById('postal_code').value.trim()
+    };
+
+    if (!data.login || !data.email || !data.password) {
+      alertEl.textContent = 'Login, email and password are required';
+      alertEl.classList.remove('d-none');
+      return;
+    }
+
+    if (data.password !== data.password2) {
+      alertEl.textContent = 'Passwords do not match';
+      alertEl.classList.remove('d-none');
+      return;
+    }
+
+    try {
+      const res = await fetch('{{ url_for("auth.api_register") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alertEl.textContent = body.error || body.detail || 'Registration failed';
+        alertEl.classList.remove('d-none');
+        return;
+      }
+
+      // store token and redirect
+      localStorage.setItem('access_token', body.access_token);
+      localStorage.setItem('user_id', body.user_id);
+      window.location.href = '/main-page';
+    } catch (err) {
+      alertEl.textContent = 'Network error';
+      alertEl.classList.remove('d-none');
+    }
+  });
+})();
+</script>
 {% endblock %}
