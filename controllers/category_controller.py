@@ -41,3 +41,22 @@ def create_category():
 
     # Simulate creation by returning the category name
     return jsonify({"category": category_name}), 201
+
+@category_bp.route("/api/categories", methods=["DELETE"])
+def delete_categories():
+    """
+    Simulated endpoint to delete categories.
+    Accepts JSON with 'categories' field as a list of category names.
+    Only accessible to logged-in users.
+    Returns the list of deleted categories.
+    """
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    categories_to_delete = data.get("categories")
+    if not categories_to_delete or not isinstance(categories_to_delete, list):
+        return jsonify({"error": "Missing or invalid categories list"}), 400
+
+    # Simulate deletion by returning the list
+    return jsonify({"deleted_categories": categories_to_delete}), 200
