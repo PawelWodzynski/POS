@@ -32,10 +32,15 @@
       <!-- Kategorie (dynamiczne) -->
       <div id="category-buttons" class="d-flex gap-2 flex-wrap justify-content-center"></div>
 
-      <!-- Login/Register -->
+      <!-- Login/Register or User Info -->
       <div class="btn-group" role="group">
-        <a href="{{ url_for('auth.login_page') }}" class="btn btn-outline-primary">Login</a>
-        <a href="{{ url_for('auth.register_page') }}" class="btn btn-primary">Register</a>
+        {% if not session.get('user_id') %}
+          <a href="{{ url_for('auth.login_page') }}" class="btn btn-outline-primary">Login</a>
+          <a href="{{ url_for('auth.register_page') }}" class="btn btn-primary">Register</a>
+        {% else %}
+          <button type="button" class="btn btn-outline-primary" disabled>{{ session.get('user_login') }}</button>
+          <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">Logout</a>
+        {% endif %}
       </div>
     </div>
   </nav>

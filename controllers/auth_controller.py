@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify, redirect, url_for, render_template, current_app
+# controllers/auth_controller.py
+from flask import Blueprint, request, jsonify, redirect, url_for, render_template, session, current_app
 from extensions import db
 from flask_jwt_extended import create_access_token
 from sqlalchemy import text
@@ -9,19 +10,30 @@ auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/", methods=["GET"])
 def root_redirect():
-    return redirect(url_for("auth.main_page"))
-
-@auth_bp.route("/main-page", methods=["GET"])
-def main_page():
-    return render_template("main.html")
+    if 'user_id' in session:
+        return redirect(url_for("auth.main_page"))
+    return redirect(url_for("auth.login_page"))
 
 @auth_bp.route("/login", methods=["GET"])
 def login_page():
+    # Clear session when loading login page
+    session.clear()
     return render_template("login.html")
 
 @auth_bp.route("/register", methods=["GET"])
 def register_page():
+    # Clear session when loading register page
+    session.clear()
     return render_template("register.html")
+
+@auth_bp.route("/logout", methods=["GET"])
+def logout():
+    session.clear()
+    return redirect(url_for("auth.login_page"))
+
+@auth_bp.route("/main-page", methods=["GET"])
+def main_page():
+    return render_template("main.html")
 
 @auth_bp.route("/api/register", methods=["POST"])
 def api_register():
@@ -49,6 +61,14 @@ def api_register():
     }
 
     try:
+        # Check if email or login already exists
+        existing_user = db.session.execute(
+            text("SELECT id FROM customers WHERE email = :email OR login = :login"),
+            {"email": params["email"], "login": params["login"]}
+        ).fetchone()
+        if existing_user:
+            return jsonify({"error": "Email or login already exists"}), 400
+
         stmt = text("""
             INSERT INTO customers (login, password, email, city, street, postal_code, first_name, last_name, role_id)
             VALUES (:login, :password, :email, :city, :street, :postal_code, :first_name, :last_name, :role_id)
@@ -60,6 +80,12 @@ def api_register():
 
         expires = datetime.timedelta(hours=12)
         token = create_access_token(identity=int(user_id), expires_delta=expires)
+
+        # Set session on successful registration
+        from flask import session
+        session['user_id'] = user_id
+        session['user_login'] = login
+
         return jsonify({"access_token": token, "user_id": user_id}), 201
     except Exception as exc:
         db.session.rollback()
@@ -90,6 +116,10 @@ def api_login():
 
         expires = datetime.timedelta(hours=12)
         token = create_access_token(identity=int(user_id), expires_delta=expires)
+
+        session["user_id"] = user_id
+        session["user_login"] = login
+
         return jsonify({"access_token": token, "user_id": user_id}), 200
 
     except Exception as exc:

@@ -8,20 +8,17 @@ def create_app(test_config=None):
     app = Flask(__name__, static_folder="static", template_folder="templates")
 
     # Podstawowa konfiguracja
-    app.config.setdefault("SECRET_KEY", os.getenv("SECRET_KEY", "dev-secret"))
-    app.config.setdefault(
-        "JWT_SECRET_KEY",
-        os.getenv("JWT_SECRET_KEY", os.getenv("SECRET_KEY", "dev-secret"))
+    secret = os.getenv("SECRET_KEY", "dev-secret")
+    app.config["SECRET_KEY"] = secret
+    app.secret_key = secret  # <-- naprawia problem z sesjami
+
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", secret)
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
+        "DATABASE_URL",
+        "postgresql://postgres:postgres@localhost:5432/pos_db"
     )
-    app.config.setdefault(
-        "SQLALCHEMY_DATABASE_URI",
-        os.getenv(
-            "DATABASE_URL",
-            "postgresql://postgres:postgres@localhost:5432/pos_db"
-        )
-    )
-    app.config.setdefault("SQLALCHEMY_TRACK_MODIFICATIONS", False)
-    app.config.setdefault("FAKESTORE_API_BASE", "https://fakestoreapi.com")
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["FAKESTORE_API_BASE"] = "https://fakestoreapi.com"
 
     if test_config:
         app.config.update(test_config)
@@ -41,7 +38,7 @@ def create_app(test_config=None):
     from controllers.main_controller import main_bp
 
     app.register_blueprint(auth_bp)
-    app.register_blueprint(category_bp)  # <- konieczne
+    app.register_blueprint(category_bp)
     app.register_blueprint(main_bp)
 
     # Health check
