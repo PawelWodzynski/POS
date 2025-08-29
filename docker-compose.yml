@@ -3,21 +3,21 @@ version: "3.8"
 services:
   db:
     image: postgres:15
+    container_name: pos_db
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-    volumes:
-      # The whole ./db directory will be mounted into the init folder so
-      # Docker's official image executes db/schema.sql on first startup.
-      - ./db:/docker-entrypoint-initdb.d:ro
-      # persistent postgres data
-      - pgdata:/var/lib/postgresql/data
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # folder z init SQL – będzie wykonany przy pierwszym starcie
+      - ./db:/docker-entrypoint-initdb.d:ro
+      # wolumen z danymi, zapewnia persistencję
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s

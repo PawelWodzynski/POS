@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card card">
+    <div class="card-body">
+      <div class="text-center mb-4">
+        <i class="bi bi-person-circle display-2 text-primary"></i>
+        <h4 class="mt-2">Sign in to your account</h4>
+        <p class="text-muted">Enter your credentials to access the POS</p>
+      </div>
+
+      <form id="loginForm" novalidate>
+        <div class="mb-3">
+          <label for="login" class="form-label">Login</label>
+          <input type="text" class="form-control" id="login" name="login" placeholder="your login" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="password" class="form-label">Password</label>
+          <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+        </div>
+
+        <div id="loginAlert" class="alert alert-danger d-none" role="alert"></div>
+
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn btn-primary">Sign in</button>
+        </div>
+      </form>
+
+      <hr class="my-4">
+
+      <div class="d-flex justify-content-between">
+        <small class="text-muted">Don't have an account?</small>
+        <a href="{{ url_for('auth.register_page') }}" class="btn btn-outline-secondary btn-sm">Register</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function () {
+  const form = document.getElementById('loginForm');
+  const alertEl = document.getElementById('loginAlert');
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    alertEl.classList.add('d-none');
+    const login = document.getElementById('login').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!login || !password) {
+      alertEl.textContent = 'Please provide both login and password';
+      alertEl.classList.remove('d-none');
+      return;
+    }
+
+    try {
+      const res = await fetch('{{ url_for("auth.api_login") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login, password })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alertEl.textContent = data.error || data.detail || 'Login failed';
+        alertEl.classList.remove('d-none');
+        return;
+      }
+
+      // store token
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('user_id', data.user_id);
+
+      // redirect to products or root
+      window.location.href = '/products';
+    } catch (err) {
+      alertEl.textContent = 'Network error';
+      alertEl.classList.remove('d-none');
+    }
+  });
+})();
+</script>
+{% endblock %}
+{% endblock %}
