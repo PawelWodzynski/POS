@@ -38,3 +38,16 @@ def post_fakestore_cart():
         return jsonify(data)
     except requests.RequestException as e:
         return jsonify({"error": "Failed to post cart to fakestoreapi", "details": str(e)}), 500
+
+@product_controller.route('/api/products/sort_by_category', methods=['GET'])
+def sort_products_by_category():
+    # Check if user is logged in
+    if 'user_id' not in session:
+        abort(401, description="Unauthorized: Login required")
+
+    category = request.args.get('category')
+    if not category:
+        return jsonify({"error": "Missing category parameter"}), 400
+
+    # For now, just return the category name as requested
+    return jsonify({"category": category})
