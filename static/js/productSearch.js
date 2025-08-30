@@ -1,3 +1,176 @@
+function renderProductTilesFromList(products) {
+  const container = document.getElementById('product-tiles-container');
+  if (!container) return;
+
+  container.innerHTML = '';
+  products.forEach(product => {
+    const col = document.createElement('div');
+    col.className = 'col-md-3 mb-4';
+
+    const card = document.createElement('div');
+    card.className = 'card h-100';
+
+    const img = document.createElement('img');
+    img.src = product.image;
+    img.className = 'card-img-top';
+    img.alt = product.title;
+
+    const cardBody = document.createElement('div');
+    cardBody.className = 'card-body d-flex flex-column';
+
+    const title = document.createElement('h5');
+    title.className = 'card-title';
+    title.textContent = product.title;
+
+    const price = document.createElement('p');
+    price.className = 'card-text text-center';
+    price.textContent = '$' + product.price.toFixed(2);
+
+    // Create quantity controls container
+    const qtyContainer = document.createElement('div');
+    qtyContainer.className = 'd-flex flex-column align-items-center gap-1 my-2';
+
+    // Create available count display
+    const availableCount = document.createElement('div');
+    availableCount.className = 'text-muted small';
+    availableCount.textContent = 'Available: ' + (product.rating && product.rating.count ? product.rating.count : 'N/A');
+
+    // Create controls container for minus, qtyDisplay, plus
+    const controlsContainer = document.createElement('div');
+    controlsContainer.className = 'd-flex justify-content-center align-items-center gap-2';
+
+    // Create minus button
+    const minusBtn = document.createElement('button');
+    minusBtn.type = 'button';
+    minusBtn.className = 'btn btn-sm btn-outline-secondary';
+    minusBtn.textContent = '-';
+
+    // Create quantity display
+    const qtyDisplay = document.createElement('span');
+    qtyDisplay.textContent = '0';
+    qtyDisplay.style.minWidth = '20px';
+    qtyDisplay.style.textAlign = 'center';
+
+    // Create plus button
+    const plusBtn = document.createElement('button');
+    plusBtn.type = 'button';
+    plusBtn.className = 'btn btn-sm btn-outline-secondary';
+    plusBtn.textContent = '+';
+
+    // Append controls to controlsContainer
+    controlsContainer.appendChild(minusBtn);
+    controlsContainer.appendChild(qtyDisplay);
+    controlsContainer.appendChild(plusBtn);
+
+    // Append availableCount and controlsContainer to qtyContainer
+    qtyContainer.appendChild(availableCount);
+    qtyContainer.appendChild(controlsContainer);
+
+    // Create Add button
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'btn btn-primary btn-sm mt-2';
+    addBtn.textContent = 'Dodaj';
+    addBtn.disabled = true;
+    addBtn.style.display = 'block';
+    addBtn.style.margin = '0 auto';
+
+    // Create a container for title, price, qty controls, and add button
+    const bottomContainer = document.createElement('div');
+    bottomContainer.className = 'mt-auto d-flex flex-column align-items-center';
+
+    // Append title and price to bottomContainer
+    bottomContainer.appendChild(title);
+    bottomContainer.appendChild(price);
+
+    // Append qty controls and add button to bottomContainer
+    bottomContainer.appendChild(qtyContainer);
+    bottomContainer.appendChild(addBtn);
+
+    // Append bottomContainer to cardBody
+    cardBody.appendChild(bottomContainer);
+    card.appendChild(img);
+    card.appendChild(cardBody);
+    col.appendChild(card);
+    container.appendChild(col);
+
+    // Quantity state
+    let quantity = 0;
+
+    // Update function for quantity display and add button state
+    function updateQuantity(newQty) {
+      quantity = Math.min(Math.max(0, newQty), product.rating && product.rating.count ? product.rating.count : Infinity);
+      qtyDisplay.textContent = quantity;
+      addBtn.disabled = quantity === 0;
+    }
+
+    // Event listeners for plus and minus buttons
+    plusBtn.addEventListener('click', () => {
+      updateQuantity(quantity + 1);
+    });
+
+    minusBtn.addEventListener('click', () => {
+      updateQuantity(quantity - 1);
+    });
+
+    // Add button click event to send request and update localStorage
+    addBtn.addEventListener('click', async () => {
+      if (quantity === 0) return;
+
+      const cartKey = 'cart';
+      let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+
+      // Prepare payload for API
+      const payload = {
+        userId: 1, // Assuming userId 1 for demo; replace with actual user ID if available
+        date: new Date().toISOString().split('T')[0],
+        products: [{ productId: product.id, quantity: quantity }]
+      };
+
+      try {
+        const res = await fetch('/api/carts/fakestore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Failed to add to cart');
+        const data = await res.json();
+
+        // Update cart in localStorage
+        data.products.forEach(p => {
+          const existing = cart.find(item => item.productId === p.productId);
+          if (existing) {
+            existing.quantity += p.quantity;
+          } else {
+            cart.push({ productId: p.productId, quantity: p.quantity });
+          }
+        });
+        localStorage.setItem(cartKey, JSON.stringify(cart));
+
+        // Update product stock in localStorage
+        product.rating.count -= quantity;
+        localStorage.setItem('product_' + product.id, JSON.stringify(product));
+
+        // Update available count display live
+        availableCount.textContent = 'Available: ' + product.rating.count;
+
+        // Reset quantity and disable add button
+        updateQuantity(0);
+
+        // Update cart button color asynchronously
+        const cartButton = document.getElementById('cart-button');
+        if (cartButton) {
+          cartButton.classList.remove('btn-outline-secondary');
+          cartButton.classList.add('btn-success');
+        }
+      } catch (err) {
+        console.error('Error adding product to cart:', err);
+        alert('Failed to add product to cart');
+      }
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   await fetchProducts();
   renderProductTiles();
@@ -34,24 +207,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       const data = await response.json();
       console.log('Search response:', data);
 
-      // Filter products by name containing the search term (case-insensitive)
-      const container = document.getElementById('product-tiles-container');
-      container.innerHTML = '';
+      // data contains the search phrase, filter localStorage products by this phrase
+      const phrase = data.product_name ? data.product_name.toLowerCase() : '';
+      const matchingProducts = [];
 
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key.startsWith('product_')) {
           try {
             const product = JSON.parse(localStorage.getItem(key));
-            if (product && product.title.toLowerCase().includes(currentValue.toLowerCase())) {
-              // tutaj możesz ponownie wyrenderować kafelek produktu
-              // żeby nie duplikować całego kodu, możesz wyciągnąć renderowanie pojedynczego produktu do funkcji pomocniczej
+            if (product && product.title.toLowerCase().includes(phrase)) {
+              matchingProducts.push(product);
             }
           } catch (e) {
             console.error('Failed to parse product from localStorage key:', key, e);
           }
         }
       }
+
+      renderProductTilesFromList(matchingProducts);
     } catch (err) {
       console.error('Error during product search:', err);
     }
