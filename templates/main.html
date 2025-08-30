@@ -31,22 +31,89 @@ function renderProductTiles() {
           img.alt = product.title;
 
           const cardBody = document.createElement('div');
-          cardBody.className = 'card-body';
+          cardBody.className = 'card-body d-flex flex-column';
 
           const title = document.createElement('h5');
           title.className = 'card-title';
           title.textContent = product.title;
 
           const price = document.createElement('p');
-          price.className = 'card-text';
+          price.className = 'card-text text-center';
           price.textContent = '$' + product.price.toFixed(2);
 
-          cardBody.appendChild(title);
-          cardBody.appendChild(price);
+          // Create quantity controls container
+          const qtyContainer = document.createElement('div');
+          qtyContainer.className = 'd-flex justify-content-center align-items-center gap-2 my-2';
+
+          // Create minus button
+          const minusBtn = document.createElement('button');
+          minusBtn.type = 'button';
+          minusBtn.className = 'btn btn-sm btn-outline-secondary';
+          minusBtn.textContent = '-';
+
+          // Create quantity display
+          const qtyDisplay = document.createElement('span');
+          qtyDisplay.textContent = '0';
+          qtyDisplay.style.minWidth = '20px';
+          qtyDisplay.style.textAlign = 'center';
+
+          // Create plus button
+          const plusBtn = document.createElement('button');
+          plusBtn.type = 'button';
+          plusBtn.className = 'btn btn-sm btn-outline-secondary';
+          plusBtn.textContent = '+';
+
+          // Append controls to qtyContainer
+          qtyContainer.appendChild(minusBtn);
+          qtyContainer.appendChild(qtyDisplay);
+          qtyContainer.appendChild(plusBtn);
+
+          // Create Add button
+          const addBtn = document.createElement('button');
+          addBtn.type = 'button';
+          addBtn.className = 'btn btn-primary btn-sm mt-2';
+          addBtn.textContent = 'Dodaj';
+          addBtn.disabled = true;
+          addBtn.style.display = 'block';
+          addBtn.style.margin = '0 auto';
+
+          // Create a container for title, price, qty controls, and add button
+          const bottomContainer = document.createElement('div');
+          bottomContainer.className = 'mt-auto d-flex flex-column align-items-center';
+
+          // Append title and price to bottomContainer
+          bottomContainer.appendChild(title);
+          bottomContainer.appendChild(price);
+
+          // Append qty controls and add button to bottomContainer
+          bottomContainer.appendChild(qtyContainer);
+          bottomContainer.appendChild(addBtn);
+
+          // Append bottomContainer to cardBody
+          cardBody.appendChild(bottomContainer);
           card.appendChild(img);
           card.appendChild(cardBody);
           col.appendChild(card);
           container.appendChild(col);
+
+          // Quantity state
+          let quantity = 0;
+
+          // Update function for quantity display and add button state
+          function updateQuantity(newQty) {
+            quantity = Math.max(0, newQty);
+            qtyDisplay.textContent = quantity;
+            addBtn.disabled = quantity === 0;
+          }
+
+          // Event listeners for plus and minus buttons
+          plusBtn.addEventListener('click', () => {
+            updateQuantity(quantity + 1);
+          });
+
+          minusBtn.addEventListener('click', () => {
+            updateQuantity(quantity - 1);
+          });
         }
       } catch (e) {
         console.error('Failed to parse product from localStorage key:', key, e);
