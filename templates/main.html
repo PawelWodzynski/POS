@@ -43,7 +43,16 @@ function renderProductTiles() {
 
           // Create quantity controls container
           const qtyContainer = document.createElement('div');
-          qtyContainer.className = 'd-flex justify-content-center align-items-center gap-2 my-2';
+          qtyContainer.className = 'd-flex flex-column align-items-center gap-1 my-2';
+
+          // Create available count display
+          const availableCount = document.createElement('div');
+          availableCount.className = 'text-muted small';
+          availableCount.textContent = 'Available: ' + (product.rating && product.rating.count ? product.rating.count : 'N/A');
+
+          // Create controls container for minus, qtyDisplay, plus
+          const controlsContainer = document.createElement('div');
+          controlsContainer.className = 'd-flex justify-content-center align-items-center gap-2';
 
           // Create minus button
           const minusBtn = document.createElement('button');
@@ -63,10 +72,14 @@ function renderProductTiles() {
           plusBtn.className = 'btn btn-sm btn-outline-secondary';
           plusBtn.textContent = '+';
 
-          // Append controls to qtyContainer
-          qtyContainer.appendChild(minusBtn);
-          qtyContainer.appendChild(qtyDisplay);
-          qtyContainer.appendChild(plusBtn);
+          // Append controls to controlsContainer
+          controlsContainer.appendChild(minusBtn);
+          controlsContainer.appendChild(qtyDisplay);
+          controlsContainer.appendChild(plusBtn);
+
+          // Append availableCount and controlsContainer to qtyContainer
+          qtyContainer.appendChild(availableCount);
+          qtyContainer.appendChild(controlsContainer);
 
           // Create Add button
           const addBtn = document.createElement('button');
