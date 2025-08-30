@@ -46,12 +46,64 @@
       </div>
 
       {% if session.get('user_id') %}
-      <a href="/cart" class="btn btn-outline-secondary ms-3" title="Cart">
+      <a href="/cart" id="cart-button" class="btn btn-outline-secondary ms-3" title="Cart">
         <i class="bi bi-cart3"></i>
       </a>
       {% endif %}
     </div>
   </nav>
+
+<script>
+
+let lastCartLength = 0;
+
+function updateCartButtonColor() {
+  const cartButton = document.getElementById('cart-button');
+  if (!cartButton) return;
+
+  const cart = JSON.parse(localStorage.getItem('cart')) || [];
+  if (cart.length > 0) {
+    cartButton.classList.remove('btn-outline-secondary', 'disabled');
+    cartButton.classList.add('btn-success');
+  } else {
+    cartButton.classList.remove('btn-success');
+    cartButton.classList.add('btn-outline-secondary', 'disabled');
+  }
+}
+
+function pollCartChanges() {
+  const cart = JSON.parse(localStorage.getItem('cart')) || [];
+  if (cart.length !== lastCartLength) {
+    lastCartLength = cart.length;
+    updateCartButtonColor();
+  }
+}
+
+// Prevent navigation if cart button is disabled
+document.addEventListener('DOMContentLoaded', () => {
+  const cartButton = document.getElementById('cart-button');
+  if (cartButton) {
+    cartButton.addEventListener('click', (e) => {
+      if (cartButton.classList.contains('disabled')) {
+        e.preventDefault();
+        console.log('Click prevented on disabled cart button');
+      }
+    });
+  }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateCartButtonColor();
+  setInterval(pollCartChanges, 500);
+});
+
+// Listen for storage events to update cart button color dynamically
+window.addEventListener('storage', (event) => {
+  if (event.key === 'cart') {
+    updateCartButtonColor();
+  }
+});
+</script>
 
   <main class="container app-container">
     {% block content %}{% endblock %}

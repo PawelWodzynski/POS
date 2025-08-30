@@ -127,6 +127,64 @@ function renderProductTiles() {
           minusBtn.addEventListener('click', () => {
             updateQuantity(quantity - 1);
           });
+
+          // Add button click event to send request and update localStorage
+          addBtn.addEventListener('click', async () => {
+            if (quantity === 0) return;
+
+            const cartKey = 'cart';
+            let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+
+            // Prepare payload for API
+            const payload = {
+              userId: 1, // Assuming userId 1 for demo; replace with actual user ID if available
+              date: new Date().toISOString().split('T')[0],
+              products: [{ productId: product.id, quantity: quantity }]
+            };
+
+            try {
+              const res = await fetch('/api/carts/fakestore', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+              if (!res.ok) throw new Error('Failed to add to cart');
+              const data = await res.json();
+
+              // Update cart in localStorage
+              data.products.forEach(p => {
+                const existing = cart.find(item => item.productId === p.productId);
+                if (existing) {
+                  existing.quantity += p.quantity;
+                } else {
+                  cart.push({ productId: p.productId, quantity: p.quantity });
+                }
+              });
+              localStorage.setItem(cartKey, JSON.stringify(cart));
+
+              // Update product stock in localStorage
+              product.rating.count -= quantity;
+              localStorage.setItem('product_' + product.id, JSON.stringify(product));
+
+              // Update available count display live
+              availableCount.textContent = 'Available: ' + product.rating.count;
+
+              // Reset quantity and disable add button
+              updateQuantity(0);
+
+              // Update cart button color asynchronously
+              const cartButton = document.getElementById('cart-button');
+              if (cartButton) {
+                cartButton.classList.remove('btn-outline-secondary');
+                cartButton.classList.add('btn-success');
+              }
+
+              // alert('Product added to cart successfully');
+            } catch (err) {
+              console.error('Error adding product to cart:', err);
+              alert('Failed to add product to cart');
+            }
+          });
         }
       } catch (e) {
         console.error('Failed to parse product from localStorage key:', key, e);
