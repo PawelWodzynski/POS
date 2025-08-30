@@ -114,7 +114,7 @@ function renderProductTiles() {
 
           // Update function for quantity display and add button state
           function updateQuantity(newQty) {
-            quantity = Math.max(0, newQty);
+            quantity = Math.min(Math.max(0, newQty), product.rating && product.rating.count ? product.rating.count : Infinity);
             qtyDisplay.textContent = quantity;
             addBtn.disabled = quantity === 0;
           }
