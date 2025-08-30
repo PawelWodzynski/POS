@@ -51,3 +51,14 @@ def sort_products_by_category():
 
     # For now, just return the category name as requested
     return jsonify({"category": category})
+
+@product_controller.route('/api/products/search', methods=['POST'])
+def search_product():
+    if 'user_id' not in session:
+        abort(401, description="Unauthorized: Login required")
+
+    data = request.get_json()
+    product_name = data.get('product_name')
+    if not product_name:
+        return jsonify({'error': 'Product name is required'}), 400
+    return jsonify({'product_name': product_name})
