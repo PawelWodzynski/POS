@@ -7,7 +7,7 @@
 {% block scripts %}
 {{ super() }}
 <script>
-function renderProductTiles() {
+function renderProductTiles(categoryFilter = null) {
   const container = document.getElementById('product-tiles-container');
   if (!container) return;
 
@@ -19,6 +19,10 @@ function renderProductTiles() {
       try {
         const product = JSON.parse(localStorage.getItem(key));
         if (product) {
+          if (categoryFilter && product.category !== categoryFilter) {
+            continue;
+          }
+
           const col = document.createElement('div');
           col.className = 'col-md-3 mb-4';
 

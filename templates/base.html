@@ -155,22 +155,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         a.className = 'btn btn-outline-primary category-btn';
         a.textContent = cat;
         // Prevent default navigation and send request with category name
-        a.addEventListener('click', async (event) => {
-          event.preventDefault();
-          try {
-            const response = await fetch(`/api/products/sort_by_category?category=${encodeURIComponent(cat)}`);
-            if (!response.ok) {
-              console.error('Failed to fetch sorted products');
-              return;
-            }
-            const data = await response.json();
-            console.log('Category sorting response:', data);
-            // You can add further UI updates here based on response if needed
-          } catch (error) {
-            console.error('Error fetching sorted products:', error);
-          }
-        });
-        container.appendChild(a);
+            a.addEventListener('click', async (event) => {
+              event.preventDefault();
+              try {
+                const response = await fetch(`/api/products/sort_by_category?category=${encodeURIComponent(cat)}`);
+                if (!response.ok) {
+                  console.error('Failed to fetch sorted products');
+                  return;
+                }
+                const data = await response.json();
+                console.log('Category sorting response:', data);
+                // Use the renderProductTiles function from main.html with category filter
+                if (window.renderProductTiles) {
+                  window.renderProductTiles(data.category);
+                } else {
+                  console.warn('renderProductTiles function not found on window');
+                }
+              } catch (error) {
+                console.error('Error fetching sorted products:', error);
+              }
+            });
+            container.appendChild(a);
+       
+          // Remove the old filterAndRenderProductsByCategory function as it's no longer needed
       });
 
       // Append the "Dodaj" button at the end
