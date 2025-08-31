@@ -176,58 +176,60 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderProductTiles();
 
   const searchInput = document.getElementById('product-search-input');
-  let lastValue = '';
+  if (searchInput) {
+    let lastValue = '';
 
-  searchInput.addEventListener('input', async () => {
-    const currentValue = searchInput.value.trim();
+    searchInput.addEventListener('input', async () => {
+      const currentValue = searchInput.value.trim();
 
-    if (currentValue === lastValue) {
-      return;
-    }
-    lastValue = currentValue;
+      if (currentValue === lastValue) {
+        return;
+      }
+      lastValue = currentValue;
 
-    if (currentValue.length === 0) {
-      // If input is empty, render all products
-      renderProductTiles();
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/products/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_name: currentValue })
-      });
-
-      if (!response.ok) {
-        console.error('Search request failed');
+      if (currentValue.length === 0) {
+        // If input is empty, render all products
+        renderProductTiles();
         return;
       }
 
-      const data = await response.json();
-      console.log('Search response:', data);
+      try {
+        const response = await fetch('/api/products/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_name: currentValue })
+        });
 
-      // data contains the search phrase, filter localStorage products by this phrase
-      const phrase = data.product_name ? data.product_name.toLowerCase() : '';
-      const matchingProducts = [];
+        if (!response.ok) {
+          console.error('Search request failed');
+          return;
+        }
 
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith('product_')) {
-          try {
-            const product = JSON.parse(localStorage.getItem(key));
-            if (product && product.title.toLowerCase().includes(phrase)) {
-              matchingProducts.push(product);
+        const data = await response.json();
+        console.log('Search response:', data);
+
+        // data contains the search phrase, filter localStorage products by this phrase
+        const phrase = data.product_name ? data.product_name.toLowerCase() : '';
+        const matchingProducts = [];
+
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key.startsWith('product_')) {
+            try {
+              const product = JSON.parse(localStorage.getItem(key));
+              if (product && product.title.toLowerCase().includes(phrase)) {
+                matchingProducts.push(product);
+              }
+            } catch (e) {
+              console.error('Failed to parse product from localStorage key:', key, e);
             }
-          } catch (e) {
-            console.error('Failed to parse product from localStorage key:', key, e);
           }
         }
-      }
 
-      renderProductTilesFromList(matchingProducts);
-    } catch (err) {
-      console.error('Error during product search:', err);
-    }
-  });
+        renderProductTilesFromList(matchingProducts);
+      } catch (err) {
+        console.error('Error during product search:', err);
+      }
+    });
+  }
 });

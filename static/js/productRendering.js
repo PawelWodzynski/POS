@@ -188,6 +188,20 @@ function renderProductTiles(categoryFilter = null) {
 
 async function fetchProducts() {
   try {
+    // Check if any product exists in localStorage
+    let hasProductInStorage = false;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key.startsWith('product_')) {
+        hasProductInStorage = true;
+        break;
+      }
+    }
+    if (hasProductInStorage) {
+      console.log('Products already in localStorage, skipping fetch.');
+      return;
+    }
+
     const response = await fetch('/api/products/fakestore');
     if (!response.ok) {
       throw new Error('Failed to fetch products');

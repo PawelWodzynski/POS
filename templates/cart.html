@@ -15,85 +15,157 @@
         <th scope="col">Total</th>
       </tr>
     </thead>
-    <tbody>
+      <tbody>
       <!-- Cart items will be dynamically inserted here -->
-    </tbody>
-  </table>
-</div>
+      </tbody>
+    </table>
+  </div>
 
-<script src="{{ url_for('static', filename='js/productRendering.js') }}"></script>
-<script src="{{ url_for('static', filename='js/productSearch.js') }}"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const cartKey = 'cart';
-    let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
-    const tbody = document.querySelector('#cart-table tbody');
-    tbody.innerHTML = '';
+  <script src="{{ url_for('static', filename='js/productRendering.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/productSearch.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const cartKey = 'cart';
+      let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+      const tbody = document.querySelector('#cart-table tbody');
+      tbody.innerHTML = '';
 
-    if (cart.length === 0) {
-      const tr = document.createElement('tr');
-      const td = document.createElement('td');
-      td.colSpan = 5;
-      td.classList.add('text-center');
-      td.textContent = 'Your cart is empty.';
-      tr.appendChild(td);
-      tbody.appendChild(tr);
-      return;
-    }
-
-    // For each cart item, get product details from localStorage and update cart item
-    cart.forEach(item => {
-      const productKey = 'product_' + item.productId;
-      const productData = localStorage.getItem(productKey);
-      if (productData) {
-        try {
-          const product = JSON.parse(productData);
-          item.name = product.title;
-          item.price = product.price;
-          item.image = product.image;
-        } catch (e) {
-          console.error('Failed to parse product data from localStorage for', productKey, e);
-        }
+      if (cart.length === 0) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 5;
+        td.classList.add('text-center');
+        td.textContent = 'Your cart is empty.';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
       }
+
+      // For each cart item, get product details from localStorage and update cart item
+      cart.forEach(item => {
+        const productKey = 'product_' + item.productId;
+        const productData = localStorage.getItem(productKey);
+        if (productData) {
+          try {
+            const product = JSON.parse(productData);
+            item.name = product.title;
+            item.price = product.price;
+            item.image = product.image;
+          } catch (e) {
+            console.error('Failed to parse product data from localStorage for', productKey, e);
+          }
+        }
+      });
+
+      // Update localStorage with enriched cart items
+      localStorage.setItem(cartKey, JSON.stringify(cart));
+
+      // Render cart table rows with image, name, quantity controls, price, total
+      cart.forEach(item => {
+        const tr = document.createElement('tr');
+
+        const imageTd = document.createElement('td');
+        const img = document.createElement('img');
+        img.src = item.image || '';
+        img.alt = item.name || 'Product image';
+        img.style.width = '50px';
+        img.style.height = '50px';
+        img.style.objectFit = 'contain';
+        img.style.marginRight = '10px';
+        imageTd.appendChild(img);
+        tr.appendChild(imageTd);
+
+        const nameTd = document.createElement('td');
+        nameTd.textContent = item.name || 'Unnamed product';
+        tr.appendChild(nameTd);
+
+        const quantityTd = document.createElement('td');
+        // Create minus button
+        const minusBtn = document.createElement('button');
+        minusBtn.textContent = '-';
+        minusBtn.className = 'btn btn-sm btn-outline-secondary me-2';
+        // Create quantity display
+        const qtyDisplay = document.createElement('span');
+        qtyDisplay.textContent = item.quantity || 1;
+        qtyDisplay.style.minWidth = '20px';
+        qtyDisplay.style.display = 'inline-block';
+        qtyDisplay.style.textAlign = 'center';
+        // Create plus button
+        const plusBtn = document.createElement('button');
+        plusBtn.textContent = '+';
+        plusBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
+
+        quantityTd.appendChild(minusBtn);
+        quantityTd.appendChild(qtyDisplay);
+        quantityTd.appendChild(plusBtn);
+        tr.appendChild(quantityTd);
+
+        const priceTd = document.createElement('td');
+        priceTd.textContent = item.price ? item.price.toFixed(2) + ' PLN' : '0 PLN';
+        tr.appendChild(priceTd);
+
+        const totalTd = document.createElement('td');
+        const total = (item.price || 0) * (item.quantity || 1);
+        totalTd.textContent = total.toFixed(2) + ' PLN';
+        tr.appendChild(totalTd);
+
+        tbody.appendChild(tr);
+
+        // Event listeners for plus and minus buttons
+        plusBtn.addEventListener('click', async () => {
+          try {
+            const response = await fetch('/api/cart/add_product', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ productId: item.productId, quantity: 1 })
+            });
+            if (!response.ok) throw new Error('Failed to add product');
+            const data = await response.json();
+
+            // Call handlePutProduct to update localStorage product quantity and cart
+            if (typeof handlePutProduct === 'function') {
+              handlePutProduct(data.productId);
+            }
+            item.quantity += 1;
+            qtyDisplay.textContent = item.quantity;
+
+            // Update total price
+            const newTotal = (item.price || 0) * item.quantity;
+            totalTd.textContent = newTotal.toFixed(2) + ' PLN';
+          } catch (error) {
+            console.error('Error adding product:', error);
+          }
+        });
+
+        minusBtn.addEventListener('click', async () => {
+          try {
+            const response = await fetch('/api/cart/remove_product', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ productId: item.productId, quantity: 1 })
+            });
+            if (!response.ok) throw new Error('Failed to remove product');
+            const data = await response.json();
+
+            // Call handleDeleteProduct to update localStorage product quantity and cart
+            if (typeof handleDeleteProduct === 'function') {
+              handleDeleteProduct(data.productId);
+            }
+            item.quantity -= 1;
+            if (item.quantity <= 0) {
+              tr.remove();
+            } else {
+              qtyDisplay.textContent = item.quantity;
+              // Update total price
+              const newTotal = (item.price || 0) * item.quantity;
+              totalTd.textContent = newTotal.toFixed(2) + ' PLN';
+            }
+          } catch (error) {
+            console.error('Error removing product:', error);
+          }
+        });
+      });
     });
-
-    // Update localStorage with enriched cart items
-    localStorage.setItem(cartKey, JSON.stringify(cart));
-
-    // Render cart table rows with image, name, quantity, price, total
-    cart.forEach(item => {
-      const tr = document.createElement('tr');
-
-      const imageTd = document.createElement('td');
-      const img = document.createElement('img');
-      img.src = item.image || '';
-      img.alt = item.name || 'Product image';
-      img.style.width = '50px';
-      img.style.height = '50px';
-      img.style.objectFit = 'contain';
-      img.style.marginRight = '10px';
-      imageTd.appendChild(img);
-      tr.appendChild(imageTd);
-
-      const nameTd = document.createElement('td');
-      nameTd.textContent = item.name || 'Unnamed product';
-      tr.appendChild(nameTd);
-
-      const quantityTd = document.createElement('td');
-      quantityTd.textContent = item.quantity || 1;
-      tr.appendChild(quantityTd);
-
-      const priceTd = document.createElement('td');
-      priceTd.textContent = item.price ? item.price.toFixed(2) + ' PLN' : '0 PLN';
-      tr.appendChild(priceTd);
-
-      const totalTd = document.createElement('td');
-      const total = (item.price || 0) * (item.quantity || 1);
-      totalTd.textContent = total.toFixed(2) + ' PLN';
-      tr.appendChild(totalTd);
-
-      tbody.appendChild(tr);
-    });
-  });
-</script>
+  </script>
 {% endblock %}
