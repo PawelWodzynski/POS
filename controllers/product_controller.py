@@ -124,3 +124,17 @@ def add_product_to_cart():
     # For demonstration, just echo back the productId and quantity
 
     return jsonify({'productId': product_id, 'quantity': quantity})
+
+@product_controller.route('/api/cart/update_cart', methods=['POST'])
+def update_cart():
+    if 'user_id' not in session:
+        abort(401, description="Unauthorized: Login required")
+
+    data = request.get_json()
+    if not data or not isinstance(data, dict):
+        return jsonify({'error': 'Invalid cart data'}), 400
+
+    # Here you would update the entire cart for the user in your database or session
+    # For demonstration, just echo back the received cart data
+
+    return jsonify(data)

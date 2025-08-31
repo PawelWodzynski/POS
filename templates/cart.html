@@ -21,6 +21,11 @@
     </table>
   </div>
 
+  <div id="cart-summary" class="mt-3">
+    <h4 style="color: green;">Total Price: <span id="total-price">0 PLN</span></h4>
+    <button id="accept-cart" class="btn btn-success">Accept</button>
+  </div>
+
   <script src="{{ url_for('static', filename='js/productRendering.js') }}"></script>
   <script src="{{ url_for('static', filename='js/productSearch.js') }}"></script>
   <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
@@ -29,7 +34,84 @@
       const cartKey = 'cart';
       let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
       const tbody = document.querySelector('#cart-table tbody');
+      const totalPriceSpan = document.getElementById('total-price');
+      const acceptButton = document.getElementById('accept-cart');
       tbody.innerHTML = '';
+
+      // Function to send cart data to finalize order endpoint
+      async function finalizeOrder() {
+        const orderData = cart.map(item => ({
+          productId: item.productId,
+          count: item.quantity
+        }));
+
+        try {
+          const response = await fetch('/api/order/finalize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(orderData)
+          });
+          if (!response.ok) throw new Error('Failed to finalize order');
+          const data = await response.json();
+          console.log('Order finalized:', data);
+          // You can add further UI feedback here, e.g. redirect or show confirmation
+
+          // Asynchronously remove ordered products from localStorage cart
+          data.forEach(orderedItem => {
+            cart = cart.filter(cartItem => cartItem.productId !== orderedItem.productId);
+          });
+          localStorage.setItem(cartKey, JSON.stringify(cart));
+          updateTotalPrice();
+          // Optionally, refresh the page or update UI to reflect empty cart items
+          // For now, just reload the page to reflect changes
+          location.reload();
+
+        } catch (error) {
+          console.error('Error finalizing order:', error);
+        }
+      }
+
+      acceptButton.addEventListener('click', () => {
+        finalizeOrder();
+      });
+
+      function updateTotalPrice() {
+        let totalSum = 0;
+        cart.forEach(item => {
+          totalSum += (item.price || 0) * (item.quantity || 1);
+        });
+        totalPriceSpan.textContent = totalSum.toFixed(2) + ' PLN';
+
+        // Disable accept button if cart is empty or totalSum is 0
+        if (cart.length === 0 || totalSum === 0) {
+          acceptButton.disabled = true;
+          totalPriceSpan.textContent = '0 PLN';
+        } else {
+          acceptButton.disabled = false;
+        }
+      }
+
+      // Enrich cart items with product data before rendering and calculating total
+      cart.forEach(item => {
+        const productKey = 'product_' + item.productId;
+        const productData = localStorage.getItem(productKey);
+        if (productData) {
+          try {
+            const product = JSON.parse(productData);
+            item.name = product.title;
+            item.price = product.price;
+            item.image = product.image;
+          } catch (e) {
+            console.error('Failed to parse product data from localStorage for', productKey, e);
+          }
+        }
+      });
+
+      // Update localStorage with enriched cart items
+      localStorage.setItem(cartKey, JSON.stringify(cart));
+
+      // Now update total price after enriching cart items
+      updateTotalPrice();
 
       if (cart.length === 0) {
         const tr = document.createElement('tr');
@@ -39,6 +121,7 @@
         td.textContent = 'Your cart is empty.';
         tr.appendChild(td);
         tbody.appendChild(tr);
+        updateTotalPrice();
         return;
       }
 
@@ -60,6 +143,9 @@
 
       // Update localStorage with enriched cart items
       localStorage.setItem(cartKey, JSON.stringify(cart));
+
+      // Call updateTotalPrice here after enriching cart items
+      updateTotalPrice();
 
       // Render cart table rows with image, name, quantity controls, price, total
       cart.forEach(item => {
@@ -133,6 +219,13 @@
             // Update total price
             const newTotal = (item.price || 0) * item.quantity;
             totalTd.textContent = newTotal.toFixed(2) + ' PLN';
+            updateTotalPrice();
+            // Also update accept button state dynamically
+            if (item.quantity <= 0 || cart.length === 0) {
+              acceptButton.disabled = true;
+            } else {
+              acceptButton.disabled = false;
+            }
           } catch (error) {
             console.error('Error adding product:', error);
           }
@@ -155,11 +248,28 @@
             item.quantity -= 1;
             if (item.quantity <= 0) {
               tr.remove();
+              // Remove item from cart array
+              cart = cart.filter(cartItem => cartItem.productId !== item.productId);
+              localStorage.setItem(cartKey, JSON.stringify(cart));
+              updateTotalPrice();
+              // Disable accept button and set total price to 0 if cart is empty
+              if (cart.length === 0) {
+                acceptButton.disabled = true;
+                totalPriceSpan.textContent = '0 PLN';
+              }
             } else {
               qtyDisplay.textContent = item.quantity;
               // Update total price
               const newTotal = (item.price || 0) * item.quantity;
               totalTd.textContent = newTotal.toFixed(2) + ' PLN';
+              updateTotalPrice();
+              // Enable or disable accept button based on cart length
+              if (cart.length === 0) {
+                acceptButton.disabled = true;
+                totalPriceSpan.textContent = '0 PLN';
+              } else {
+                acceptButton.disabled = false;
+              }
             }
           } catch (error) {
             console.error('Error removing product:', error);
