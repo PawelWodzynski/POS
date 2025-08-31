@@ -62,3 +62,15 @@ def search_product():
     if not product_name:
         return jsonify({'error': 'Product name is required'}), 400
     return jsonify({'product_name': product_name})
+
+@product_controller.route('/api/products/get_by_id', methods=['POST'])
+def get_product_by_id():
+    if 'user_id' not in session:
+        abort(401, description="Unauthorized: Login required")
+
+    data = request.get_json()
+    product_id = data.get('id')
+    if not product_id:
+        return jsonify({'error': 'Product ID is required'}), 400
+    # For now, just echo back the product ID as requested
+    return jsonify({'id': product_id})
