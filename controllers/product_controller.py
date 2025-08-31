@@ -74,3 +74,53 @@ def get_product_by_id():
         return jsonify({'error': 'Product ID is required'}), 400
     # For now, just echo back the product ID as requested
     return jsonify({'id': product_id})
+
+@product_controller.route('/api/cart/update_product', methods=['POST'])
+def update_product_in_cart():
+    if 'user_id' not in session:
+        abort(401, description="Unauthorized: Login required")
+
+    data = request.get_json()
+    product_id = data.get('productId')
+    quantity = data.get('quantity')
+
+    if product_id is None or quantity is None:
+        return jsonify({'error': 'Product ID and quantity are required'}), 400
+
+    # Here you would update the product quantity in the user's cart in your database or session
+    # For demonstration, just echo back the productId and quantity
+
+    return jsonify({'productId': product_id, 'quantity': quantity})
+
+@product_controller.route('/api/cart/remove_product', methods=['DELETE'])
+def remove_product_from_cart():
+    if 'user_id' not in session:
+        abort(401, description="Unauthorized: Login required")
+
+    data = request.get_json()
+    product_id = data.get('productId')
+
+    if product_id is None:
+        return jsonify({'error': 'Product ID is required'}), 400
+
+    # Here you would remove the product from the user's cart in your database or session
+    # For demonstration, just echo back the productId
+
+    return jsonify({'productId': product_id})
+
+@product_controller.route('/api/cart/add_product', methods=['PUT'])
+def add_product_to_cart():
+    if 'user_id' not in session:
+        abort(401, description="Unauthorized: Login required")
+
+    data = request.get_json()
+    product_id = data.get('productId')
+    quantity = data.get('quantity')
+
+    if product_id is None or quantity is None:
+        return jsonify({'error': 'Product ID and quantity are required'}), 400
+
+    # Here you would add the product with quantity to the user's cart in your database or session
+    # For demonstration, just echo back the productId and quantity
+
+    return jsonify({'productId': product_id, 'quantity': quantity})
