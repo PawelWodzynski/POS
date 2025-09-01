@@ -1,42 +1,56 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-  <h1 class="mb-4">Delivery Products</h1>
-  <div class="mb-3 row">
-    <label for="productSelect" class="col-sm-2 col-form-label">Select product:</label>
-    <div class="col-sm-10">
-      <select id="productSelect" class="form-select"></select>
+<div class="container mt-5">
+  <h1 class="mb-5 text-center fw-bold text-primary">Delivery Management</h1>
+  <div class="row g-5">
+    <div class="col-md-5">
+      <div class="card p-4 shadow-lg rounded-4 border-0">
+        <h5 class="card-title mb-4 text-secondary fw-semibold">Add Product to Delivery</h5>
+        <div class="mb-4">
+          <label for="productSelect" class="form-label fw-semibold">Select product</label>
+          <select id="productSelect" class="form-select form-select-lg shadow-sm rounded-3"></select>
+        </div>
+        <div class="mb-4">
+          <label for="quantityInput" class="form-label fw-semibold">Quantity</label>
+          <input type="number" id="quantityInput" min="1" value="1" class="form-control form-control-lg shadow-sm rounded-3" />
+        </div>
+        <button id="acceptButton" class="btn btn-primary w-100 fw-semibold shadow-sm rounded-3">Add to Delivery</button>
+        <button id="openCreateProductModalBtn" class="btn btn-info w-100 mt-4 fw-semibold shadow-sm rounded-3">Add New Product</button>
+      </div>
+    </div>
+    <div class="col-md-7">
+      <div class="card p-4 shadow-lg rounded-4 border-0">
+        <h5 class="card-title mb-4 text-secondary fw-semibold">Products in Delivery</h5>
+        <div class="table-responsive rounded-3 shadow-sm">
+          <table id="productsTable" class="table table-striped table-bordered align-middle mb-3 rounded-3">
+            <thead class="table-primary text-primary">
+              <tr>
+                <th>Product ID</th>
+                <th>Name</th>
+                <th>Count</th>
+                <th>Price</th>
+                <th>Image</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Rows will be added here -->
+            </tbody>
+          </table>
+        </div>
+        <button id="enterDeliveryButton" class="btn btn-success w-100 fw-semibold shadow-sm rounded-3">Enter Delivery</button>
+      </div>
     </div>
   </div>
-  <div class="mb-3 row">
-    <label for="quantityInput" class="col-sm-2 col-form-label">Quantity:</label>
-    <div class="col-sm-10">
-      <input type="number" id="quantityInput" min="1" value="1" class="form-control" />
-    </div>
-  </div>
-  <button id="acceptButton" class="btn btn-primary mb-4">Accept</button>
-
-  <h2>Products Table</h2>
-  <table id="productsTable" class="table table-striped table-bordered align-middle">
-    <thead class="table-dark">
-      <tr>
-        <th>Product ID</th>
-        <th>Name</th>
-        <th>Count</th>
-        <th>Price</th>
-        <th>Image</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Rows will be added here -->
-    </tbody>
-  </table>
-  <button id="enterDeliveryButton" class="btn btn-success mt-3">Enter Delivery</button>
 </div>
 
 <script src="/static/js/delivery_products.js"></script>
 <script src="/static/js/delivery_table.js"></script>
+<script src="/static/js/delivery_create_product.js"></script>
+{# 
+Removed inline modal initialization and show code from delivery.html to avoid double initialization and conflicts.
+Modal is now handled solely by delivery_create_product.js script.
+#}
 
 <!-- Modal for creating new product -->
 <div class="modal fade" id="createProductModal" tabindex="-1" aria-labelledby="createProductModalLabel" aria-hidden="true">
@@ -83,100 +97,5 @@
     </div>
   </div>
 </div>
-
-<button id="openCreateProductModalBtn" class="btn btn-info mt-3">Add New Product</button>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const createProductModal = new bootstrap.Modal(document.getElementById('createProductModal'));
-  const openModalBtn = document.getElementById('openCreateProductModalBtn');
-  const createProductForm = document.getElementById('createProductForm');
-
-  openModalBtn.addEventListener('click', () => {
-    createProductForm.reset();
-    createProductForm.productImage.value = 'https://placehold.co/200x200?text=Produkt';
-
-    // Populate category dropdown from localStorage fakestore_categories
-    const categorySelect = document.getElementById('productCategory');
-    categorySelect.innerHTML = '';
-    const categoriesStr = localStorage.getItem('fakestore_categories');
-    let categories = [];
-    if (categoriesStr) {
-      try {
-        categories = JSON.parse(categoriesStr);
-      } catch (e) {
-        console.error('Failed to parse fakestore_categories from localStorage', e);
-      }
-    }
-    categories.forEach(cat => {
-      const option = document.createElement('option');
-      option.value = cat;
-      option.textContent = cat;
-      categorySelect.appendChild(option);
-    });
-
-    createProductModal.show();
-  });
-
-  createProductForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    // Gather form data
-    const formData = new FormData(createProductForm);
-    const product = {
-      title: formData.get('title'),
-      category: formData.get('category'),
-      description: formData.get('description'),
-      price: parseFloat(formData.get('price')),
-      rating: {
-        rate: parseFloat(formData.get('ratingRate')),
-        count: 0
-      },
-      image: formData.get('image')
-    };
-
-    // Generate unique incremented ID based on existing products in localStorage
-    let maxId = 0;
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key.startsWith('product_')) {
-        try {
-          const p = JSON.parse(localStorage.getItem(key));
-          if (p.id > maxId) maxId = p.id;
-        } catch {}
-      }
-    }
-    product.id = maxId + 1;
-
-    try {
-      const response = await fetch('/api/products/create_product_simulation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(product)
-      });
-      if (!response.ok) {
-        alert('Failed to create product');
-        return;
-      }
-      const createdProduct = await response.json();
-
-      // Add new product to localStorage with count === 0
-      const productKey = `product_${createdProduct.id}`;
-      localStorage.setItem(productKey, JSON.stringify(createdProduct));
-
-      // Optionally, you can update UI or notify user
-      // alert('Product created and added to localStorage with count 0');
-      createProductModal.hide();
-      // Refresh product select dropdown to include new product
-      if (window.populateProductSelect) {
-        window.populateProductSelect();
-      }
-    } catch (error) {
-      console.error('Error creating product:', error);
-      alert('Error creating product');
-    }
-  });
-});
-</script>
 
 {% endblock %}
