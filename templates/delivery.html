@@ -54,7 +54,9 @@
           </div>
           <div class="mb-3">
             <label for="productCategory" class="form-label">Category</label>
-            <input type="text" class="form-control" id="productCategory" name="category" required />
+            <select class="form-select" id="productCategory" name="category" required>
+              <!-- Options will be populated dynamically -->
+            </select>
           </div>
           <div class="mb-3">
             <label for="productDescription" class="form-label">Description</label>
@@ -93,6 +95,26 @@ document.addEventListener('DOMContentLoaded', () => {
   openModalBtn.addEventListener('click', () => {
     createProductForm.reset();
     createProductForm.productImage.value = 'https://placehold.co/200x200?text=Produkt';
+
+    // Populate category dropdown from localStorage fakestore_categories
+    const categorySelect = document.getElementById('productCategory');
+    categorySelect.innerHTML = '';
+    const categoriesStr = localStorage.getItem('fakestore_categories');
+    let categories = [];
+    if (categoriesStr) {
+      try {
+        categories = JSON.parse(categoriesStr);
+      } catch (e) {
+        console.error('Failed to parse fakestore_categories from localStorage', e);
+      }
+    }
+    categories.forEach(cat => {
+      const option = document.createElement('option');
+      option.value = cat;
+      option.textContent = cat;
+      categorySelect.appendChild(option);
+    });
+
     createProductModal.show();
   });
 
