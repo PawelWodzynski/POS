@@ -24,5 +24,22 @@ services:
       timeout: 5s
       retries: 5
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pos_app
+    command: python app.py
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "51953:5000"
+    volumes:
+      - ./:/app
+    working_dir: /app
+
 volumes:
   pgdata:
