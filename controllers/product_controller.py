@@ -150,3 +150,18 @@ def add_products_simulation():
 
     # Just echo back the received data as a simulation
     return jsonify(data)
+
+@product_controller.route('/api/products/create_product_simulation', methods=['POST'])
+def create_product_simulation():
+    if 'user_id' not in session:
+        abort(401, description="Unauthorized: Login required")
+
+    product_data = request.get_json()
+    required_fields = {"category", "description", "id", "image", "price", "rating", "title"}
+    if not product_data or not isinstance(product_data, dict):
+        return jsonify({'error': 'Invalid input, expected a product object'}), 400
+    if not required_fields.issubset(product_data.keys()):
+        return jsonify({'error': f'Missing required fields: {required_fields - product_data.keys()}'}), 400
+
+    # Just echo back the received product data as a simulation
+    return jsonify(product_data)
