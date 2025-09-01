@@ -138,3 +138,15 @@ def update_cart():
     # For demonstration, just echo back the received cart data
 
     return jsonify(data)
+
+@product_controller.route('/api/products/add_products_simulation', methods=['POST'])
+def add_products_simulation():
+    if 'user_id' not in session:
+        abort(401, description="Unauthorized: Login required")
+
+    data = request.get_json()
+    if not data or not isinstance(data, list):
+        return jsonify({'error': 'Invalid input, expected a list of productID:count objects'}), 400
+
+    # Just echo back the received data as a simulation
+    return jsonify(data)

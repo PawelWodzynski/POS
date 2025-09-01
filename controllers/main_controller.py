@@ -15,3 +15,9 @@ def cart_page():
     if not session.get("user_id"):
         return redirect(url_for("auth.login_page"))
     return render_template("cart.html")
+
+@main_bp.route("/delivery", methods=["GET"])
+def delivery_page():
+    if not session.get("user_id"):
+        return redirect(url_for("auth.login_page"))
+    return render_template("delivery.html")
